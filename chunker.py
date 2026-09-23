@@ -13,6 +13,7 @@ class Chunk:
     code: str
     docstring: str | None
     parent_class: str | None
+    calls: list[str]
 
     def to_metadata(self) -> dict:
         return {
@@ -22,6 +23,8 @@ class Chunk:
             "start_line": self.start_line,
             "end_line": self.end_line,
             "parent_class": self.parent_class or "",
+            # Chroma metadata must be scalar, so store calls as a comma-separated string
+            "calls": ",".join(self.calls),
         }
 
 
@@ -50,5 +53,6 @@ def chunk_entities(entities: list[CodeEntity]) -> list[Chunk]:
             code=entity.source,
             docstring=entity.docstring,
             parent_class=entity.parent_class,
+            calls=list(dict.fromkeys(entity.calls)),  # dedupe, keep order
         ))
     return chunks

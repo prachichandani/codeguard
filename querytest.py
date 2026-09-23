@@ -3,7 +3,7 @@ from pathlib import Path
 from vectorstore import semantic_search
 from dotenv import load_dotenv
 load_dotenv()
-from agent import run_agent
+from agent import run_agent, DEFAULT_TASK
 
 CHROMA_DIR = Path("chroma_db")
 
@@ -27,14 +27,6 @@ collection = client.get_collection("code_chunks")
 #         f"(lines {result['start_line']}-{result['end_line']})"
 #     )
 
-task = (
-    "Investigate this codebase for security issues, bad practices, and "
-    "architectural problems. Use semantic_search to look for risk areas: "
-    "authentication/session handling, user input, and file operations. "
-    "Use symbol_search to inspect specific functions you see referenced. "
-    "Report concrete findings with evidence."
-)
-
-findings = run_agent(task, collection)
+findings = run_agent(DEFAULT_TASK, collection)
 print("\n=== FINDINGS ===\n")
 print(findings)

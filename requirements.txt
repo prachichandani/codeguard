@@ -1,0 +1,6 @@
+groq
+chromadb
+sentence-transformers
+langgraph
+gitpython
+python-dotenv
