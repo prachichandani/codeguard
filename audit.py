@@ -2,7 +2,9 @@ import re
 import sys
 from dotenv import load_dotenv
 load_dotenv()
-from clone_test import clone_repo
+from events import emit, finish_run, start_run
+from agent import DAILY_LIMIT_HIT
+from repo import clone_repo, remove_clone
 from scanner import scan_repo
 from ast_parser import parse_repo
 from chunker import chunk_entities
@@ -32,14 +34,21 @@ def print_report(judged: dict):
 
 
 def audit(github_url: str) -> dict:
+    emit("stage", stage="clone")
     path = clone_repo(github_url)
-    files = scan_repo(path)
-    entities = parse_repo(files, path)
-    chunks = chunk_entities(entities)
-    print(f"{len(files)} files, {len(entities)} functions/classes")
+    try:
+        emit("stage", stage="scan")
+        files = scan_repo(path)
+        emit("stage", stage="parse", files=len(files))
+        entities = parse_repo(files, path)
+        chunks = chunk_entities(entities)
+        print(f"{len(files)} files, {len(entities)} functions/classes")
+    finally:
+        remove_clone(path)  # everything needed is in the index now
     if not chunks:
         return {}
 
+    emit("stage", stage="index", files=len(files), entities=len(entities))
     collection = index_chunks(chunks, collection_name_for(github_url))
     return run_pipeline(collection)
 
@@ -47,8 +56,22 @@ def audit(github_url: str) -> dict:
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         sys.exit("Usage: python audit.py <github_url>")
-    judged = audit(sys.argv[1])
-    if not judged:
-        print("No Python functions/classes found to audit.")
+    start_run(sys.argv[1])
+    try:
+        judged = audit(sys.argv[1])
+    except BaseException as e:  # incl. Ctrl+C, so the dashboard doesn't show it as still running
+        emit("run_failed", error=f"{type(e).__name__}: {e}")
+        finish_run("failed", error=str(e))
+        raise
+    judged = judged or {"accepted": [], "rejected": []}
+    emit("stage", stage="done")
+    emit("run_finished", accepted=judged["accepted"], rejected=judged["rejected"])
+    finish_run("finished", accepted=len(judged["accepted"]), rejected=len(judged["rejected"]),
+               quota_exhausted=DAILY_LIMIT_HIT.is_set())
+    if DAILY_LIMIT_HIT.is_set():
+        print("\n*** Groq's daily token limit was reached: the agents stopped early, so these "
+              "results are incomplete. Try again later. ***")
+    if not judged["accepted"] and not judged["rejected"]:
+        print("No findings (or no Python functions/classes found to audit).")
     else:
         print_report(judged)

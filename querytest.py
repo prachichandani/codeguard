@@ -27,6 +27,9 @@ collection = client.get_collection("code_chunks")
 #         f"(lines {result['start_line']}-{result['end_line']})"
 #     )
 
-findings = run_agent(DEFAULT_TASK, collection)
+result = run_agent(DEFAULT_TASK, collection)
 print("\n=== FINDINGS ===\n")
-print(findings)
+for f in result["findings"]:
+    print(f"[{f.get('severity')}] {f.get('title')} - {f.get('file_path')}:{f.get('start_line')}")
+if result["error"]:
+    print("Stopped early:", result["error"])

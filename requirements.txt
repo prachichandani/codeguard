@@ -4,3 +4,5 @@ sentence-transformers
 langgraph
 gitpython
 python-dotenv
+fastapi
+uvicorn

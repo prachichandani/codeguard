@@ -1,6 +1,4 @@
-import tempfile
-from pathlib import Path
-from git import Repo
+from repo import clone_repo
 from scanner import scan_repo
 from ast_parser import parse_repo
 from chunker import chunk_entities
@@ -8,12 +6,6 @@ from embedder import embed_texts
 from vectorstore import index_chunks, semantic_search
 from dotenv import load_dotenv
 load_dotenv()
-from agent import run_agent
-
-def clone_repo(github_url: str) -> Path:
-    temp_dir = Path(tempfile.mkdtemp(prefix="code_auditor_"))
-    Repo.clone_from(github_url, temp_dir, depth=1)
-    return temp_dir
 
 if __name__ == "__main__":
     path = clone_repo("https://github.com/pallets/flask")
